@@ -134,4 +134,3 @@ src/main/java/
 ## 📌 Summary
 
 OpenBlog is designed to provide a **robust, scalable, and modern blogging platform** using React and Spring Boot, with efficient handling of both structured and unstructured data.
-
