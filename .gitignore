@@ -1,0 +1,18 @@
+# Default ignored files
+/.idea/
+/.vscode/
+/.DS_Store
+*.log
+
+# Backend
+Backend/target/
+Backend/*.iml
+Backend/.mvn/wrapper/maven-wrapper.jar
+
+# Frontend
+FrontEnd/node_modules/
+FrontEnd/dist/
+FrontEnd/.env.local
+FrontEnd/.env.development.local
+FrontEnd/.env.test.local
+FrontEnd/.env.production.local
