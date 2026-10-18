@@ -50,6 +50,8 @@ async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T>
 }
 
 // ─── Auth API ─────────────────────────────────────────────────────────────────
+export type UserRole = "USER" | "ADMIN";
+
 export interface ApiUser {
   id: string;
   name: string;
@@ -57,6 +59,7 @@ export interface ApiUser {
   avatar: string;
   bio: string;
   joinedAt: string;
+  role?: UserRole;
   postsCount?: number;
   followersCount?: number;
   followingCount?: number;
@@ -115,7 +118,8 @@ export interface CreatePostInput {
 
 export const postsApi = {
   getPublished: (params?: { q?: string; tag?: string }) => {
-    const query = new URLSearchParams(params as any).toString();
+    const entries = Object.entries(params ?? {}).filter(([, v]) => v !== undefined) as [string, string][];
+    const query = new URLSearchParams(entries).toString();
     return apiFetch<ApiPost[]>(`/api/posts${query ? '?' + query : ''}`, { auth: false });
   },
 
@@ -238,6 +242,41 @@ export const meApi = {
 
   deleteAccount: () =>
     apiFetch<{ success: boolean }>('/api/me', { method: 'DELETE' }),
+};
+
+// ─── Admin API (RBAC-gated; backend returns 403 for non-admins) ───────────────
+export interface AdminUser extends ApiUser {
+  role: UserRole;
+  totalPosts: number;
+}
+
+export interface AdminStats {
+  totalUsers: number;
+  totalAdmins: number;
+  totalPosts: number;
+  publishedPosts: number;
+  draftPosts: number;
+  totalComments: number;
+  totalLikes: number;
+  totalFollows: number;
+}
+
+export const adminApi = {
+  getUsers: () => apiFetch<AdminUser[]>('/api/admin/users'),
+
+  changeRole: (userId: string, role: UserRole) =>
+    apiFetch<AdminUser>(`/api/admin/users/${userId}/role`, {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
+    }),
+
+  deleteUser: (userId: string) =>
+    apiFetch<{ success: boolean }>(`/api/admin/users/${userId}`, { method: 'DELETE' }),
+
+  deletePost: (postId: string) =>
+    apiFetch<{ success: boolean }>(`/api/admin/posts/${postId}`, { method: 'DELETE' }),
+
+  getStats: () => apiFetch<AdminStats>('/api/admin/stats'),
 };
 
 // ─── Health Check ─────────────────────────────────────────────────────────────

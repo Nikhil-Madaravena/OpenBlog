@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import { authApi, usersApi, getToken, setToken, clearToken, type ApiUser } from "@/lib/api";
 
+export type UserRole = "USER" | "ADMIN";
+
 export interface User {
   id: string;
   name: string;
@@ -8,6 +10,7 @@ export interface User {
   avatar: string;
   bio: string;
   joinedAt: string;
+  role?: UserRole;
   postsCount?: number;
   followersCount?: number;
   followingCount?: number;
@@ -16,6 +19,7 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  isAdmin: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   signup: (name: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
@@ -67,6 +71,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       avatar: u.avatar,
       bio: u.bio,
       joinedAt: u.joinedAt,
+      role: u.role,
       postsCount: u.postsCount,
       followersCount: u.followersCount,
       followingCount: u.followingCount,
@@ -199,6 +204,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     <AuthContext.Provider value={{
       user,
       isAuthenticated: !!user,
+      isAdmin: user?.role === "ADMIN",
       login,
       signup,
       logout,

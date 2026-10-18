@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Plus, Search, Edit2, Trash2, Eye, Calendar,
   Clock, Tag, PenLine, LayoutDashboard, FileText, Globe, Settings, LogOut,
-  Bookmark, User,
+  Bookmark, User, Shield,
 } from "lucide-react";
 import { useBlog } from "@/contexts/BlogContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,8 +33,9 @@ export default function MyPosts() {
   const navigate = useNavigate();
   const location = useLocation();
   const { getMyPosts, deletePost } = useBlog();
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const myPosts = useMemo(() => getMyPosts(), [getMyPosts]);
+  const items = isAdmin ? [...navItems, { icon: Shield, label: "Admin", path: "/admin" }] : navItems;
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "published" | "draft" | "scheduled" | "archived">("all");
@@ -114,7 +115,7 @@ export default function MyPosts() {
         </div>
 
         <nav className="flex-1 p-4 space-y-1">
-          {navItems.map((item) => {
+          {items.map((item) => {
             const isActive = location.pathname === item.path;
             return (
               <Link

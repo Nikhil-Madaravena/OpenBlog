@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import {
   PenLine, LayoutDashboard, FileText, Globe, Settings, LogOut,
   Plus, Search, Eye, TrendingUp, Users, MoreHorizontal, Edit, Trash2,
-  Bookmark, User
+  Bookmark, User, Shield
 } from "lucide-react";
 import { statusColors } from "@/data/mockData";
 import { type BlogPost } from "@/contexts/BlogContext";
@@ -35,8 +35,10 @@ const Dashboard = () => {
   const [activeFilter, setActiveFilter] = useState<string>("all");
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const { posts, getMyPosts, deletePost, bookmarkedPosts, getPost } = useBlog();
+
+  const items = isAdmin ? [...navItems, { icon: Shield, label: "Admin", path: "/admin" }] : navItems;
 
   const isBookmarksView = location.pathname === "/dashboard/bookmarks";
 
@@ -91,7 +93,7 @@ const Dashboard = () => {
         </div>
 
         <nav className="flex-1 p-4 space-y-1">
-          {navItems.map((item) => {
+          {items.map((item) => {
             const isActive = location.pathname === item.path;
             return (
               <Link

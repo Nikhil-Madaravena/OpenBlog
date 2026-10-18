@@ -31,6 +31,8 @@ export interface Comment {
   replies: Comment[];
 }
 
+export type UserRole = "USER" | "ADMIN";
+
 export interface User {
   id: string;
   name: string;
@@ -38,6 +40,7 @@ export interface User {
   avatar: string;
   bio: string;
   joinedAt: string;
+  role?: UserRole;
   postsCount?: number;
   followersCount?: number;
   followingCount?: number;

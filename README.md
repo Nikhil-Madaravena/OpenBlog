@@ -1,14 +1,14 @@
 <div align="center">
-  <h1>📝 OpenBlog – Multi-Purpose Blog Platform</h1>
-  <p>A scalable, modular, and full-stack blog platform that enables users to create, manage, and interact with blog content.</p>
+  <h1>📝 OpenBlog – Multi-User Blogging Platform</h1>
+  <p>A JWT-authenticated, RBAC-secured full-stack blog platform with full CRUD across users, posts, and nested comments.</p>
 
   <div>
-    <img src="https://img.shields.io/badge/Java-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java" />
-    <img src="https://img.shields.io/badge/Spring_Boot-6DB33F?style=for-the-badge&logo=spring-boot&logoColor=white" alt="Spring Boot" />
-    <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React" />
+    <img src="https://img.shields.io/badge/Java_17-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java" />
+    <img src="https://img.shields.io/badge/Spring_Boot_3-6DB33F?style=for-the-badge&logo=spring-boot&logoColor=white" alt="Spring Boot" />
+    <img src="https://img.shields.io/badge/React_18-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React" />
+    <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
     <img src="https://img.shields.io/badge/Vite-B73BFE?style=for-the-badge&logo=vite&logoColor=FFD62E" alt="Vite" />
-    <img src="https://img.shields.io/badge/MySQL-005C84?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL" />
-    <img src="https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black" alt="Firebase" />
+    <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" />
   </div>
 </div>
 
@@ -16,143 +16,150 @@
 
 ## 🚀 Features
 
-* **🔐 User Authentication**: Secure JWT-based authentication system.
-* **✍️ Blog Creation & Management**: Create, edit, and manage blog posts seamlessly.
-* **💬 Commenting System**: Engage with content through nested comments.
-* **❤️ Like & Interaction Features**: Express appreciation with post likes.
-* **🖼️ Media Upload**: Profile pictures and blog media handling via Firebase.
-* **🔒 Role-Based Access Control (RBAC)**: Secure access tailored to user roles (Admin, User).
-* **⚡ Scalable & Modular Architecture**: Built with maintainability and scaling in mind.
+* **🔐 JWT Authentication** — stateless login/signup, token validated on every request by a custom `JwtAuthenticationFilter`.
+* **🔒 Role-Based Access Control (RBAC)** — `USER` / `ADMIN` roles enforced declaratively in Spring Security (`hasRole("ADMIN")`) and reflected in the UI (an Admin dashboard only admins can reach).
+* **✍️ Blog CRUD** — drafts, publishing, tags, read-time estimation, ownership-checked edit/delete.
+* **💬 Nested Comments** — threaded replies, author/post-owner/admin-gated moderation, per-comment likes.
+* **❤️ Likes, Bookmarks & Follows** — persisted (not simulated) many-to-many relations with idempotent toggle endpoints.
+* **🛠️ Admin Console** — promote/demote users, remove accounts, moderate any post, platform-wide stats.
+* **⚙️ Account Settings** — public/private profile toggle, blog name, notification preferences.
 
 ---
 
 ## 🏗️ Architecture Overview
 
-The application follows a **layered client-server architecture**:
-
 ```text
-Client Layer (React Frontend)
+Client Layer (React 18 + TypeScript, Vite, shadcn/ui)
+        ↓  REST / JSON, Bearer JWT
+Application Layer (Spring Boot 3, Spring Security, Spring Data JPA/Hibernate)
         ↓
-Application Layer (Spring Boot Backend)
-        ↓
-Data Layer (H2/MySQL + Firebase)
+Data Layer (H2 in-memory for dev · PostgreSQL for prod)
 ```
 
-* Communication via **REST APIs (HTTP)**
-* Data exchanged in **JSON format**
+Backend package layout (`Backend/src/main/java/com/openblog/`):
+
+```text
+entity/       User, Post, Comment, PostLike, Bookmark, Follow, CommentLike, Role
+repository/   Spring Data JPA repositories (fetch-joined queries for list endpoints)
+security/     JwtUtil, JwtAuthenticationFilter, SecurityUtils
+config/       SecurityConfiguration (CORS, RBAC rules, 401/403 handling)
+controller/   AuthController, MeController, UserController, PostController,
+              CommentController, AdminController, HealthController
+util/         Mappers (entity → response DTOs), ApiException, GlobalExceptionHandler
+```
+
+### Query optimization & lazy loading
+
+`Post.author`, `Comment.author/post`, and the `Like`/`Bookmark`/`Follow` associations are all
+`FetchType.LAZY` (not eagerly joined on every query). List endpoints that need the association
+(`GET /api/posts`, `GET /api/posts/mine`, `GET /api/posts/{id}/comments`, …) use explicit
+`LEFT JOIN FETCH` queries in the repositories instead, so a page of N posts costs one query
+instead of N+1. Remaining incidental lazy navigation (follow lists, bookmarks, single-post
+fetch) is wrapped in `@Transactional(readOnly = true)` so the persistence context stays open
+for exactly the request, rather than relying on Open Session In View.
 
 ---
 
 ## 💻 Tech Stack
 
 ### Frontend
-* **React.js (SPA)** powered by **Vite**
-* **Redux / Context API** for State Management
-* **Tailwind CSS / Shadcn UI** for modern styling
-* **Axios** for API requests
+* **React 18 + TypeScript**, built with **Vite**
+* **React Context API** for auth/blog state, **TanStack Query** for server cache
+* **Tailwind CSS + shadcn/ui (Radix primitives)**
+* **React Router**, **Vitest** for tests
 
 ### Backend
-* **Spring Boot 3** (MVC Architecture)
-* **Spring Data JPA** (Hibernate)
-* **Spring Security** & **JWT Authentication**
-* **BCrypt** Password Hashing
+* **Spring Boot 3** / Java 17
+* **Spring Data JPA (Hibernate)**
+* **Spring Security** with a custom **JWT** filter and role-based authorization rules
+* **BCrypt** password hashing
+* **io.jsonwebtoken (jjwt)** for token signing/parsing
 
-### Database & Storage
-* **H2 Database** (In-Memory Development Mode)
-* **MySQL** (Production Database)
-* **Firebase Storage** (Media Files)
+### Database
+* **H2** (in-memory) — default, zero-setup local dev profile
+* **PostgreSQL** — production profile, provisioned via the included `docker-compose.yml`
 
 ---
 
 ## 🚀 Getting Started
 
-Follow these instructions to run the project locally for development and testing.
-
 ### Prerequisites
-* **Java 17+**
-* **Maven**
-* **Node.js 18+** & **npm** / **bun**
+* **Java 17+** and **Maven**
+* **Node.js 18+** and **npm**
+* **Docker** (optional — only needed for the PostgreSQL profile)
 
-### 1. Clone the repository
-```bash
-git clone https://github.com/Nikhil-Madaravena/OpenBlog.git
-cd OpenBlog
-```
-
-### 2. Start the Backend (Spring Boot)
-The backend is pre-configured to use an H2 in-memory database for local development, so no database setup is required.
+### 1. Start the Backend (Spring Boot, H2, zero setup)
 
 ```bash
 cd Backend
-mvn clean install -DskipTests
-mvn spring-boot:run
+mvn clean package -DskipTests
+java -jar target/backend-0.0.1-SNAPSHOT.jar
 ```
-*The backend will run on `http://localhost:3001`.*
+Runs on `http://localhost:3001`. Demo data (users, posts, nested comments, likes, follows) is
+seeded automatically on first boot.
 
-### 3. Start the Frontend (React + Vite)
-Open a new terminal window:
+**Switch to PostgreSQL** instead of H2:
+```bash
+docker compose up -d                 # starts Postgres on :5432
+cd Backend
+SPRING_PROFILES_ACTIVE=prod mvn spring-boot:run
+```
+
+### 2. Start the Frontend (React + Vite)
 
 ```bash
 cd FrontEnd
 npm install
 npm run dev
 ```
-*The frontend will run on `http://localhost:8080`.*
+Runs on `http://localhost:8080`.
+
+### 3. Demo accounts
+
+| Email | Password | Role |
+|---|---|---|
+| `admin@openblog.com` | `admin123` | **ADMIN** — visit `/admin` after logging in |
+| `nik@example.com` | `123456` | **ADMIN** |
+| `alice@example.com` | `1234` | USER |
+| `bob@example.com` | `1234` | USER |
+| `charlie@example.com` | `1234` | USER |
 
 ---
 
-## 📂 Project Structure
+## 📡 API Surface
 
-### Frontend (`/FrontEnd`)
-```text
-src/
- ├── components/    # Reusable UI components
- ├── pages/         # Application views/routes
- ├── services/      # API communication logic
- ├── store/         # State management
- └── App.tsx        # Main application entry
-```
+35+ REST endpoints across six resource groups:
 
-### Backend (`/Backend`)
-```text
-src/main/java/com/openblog/
- ├── controller/    # REST API Endpoints
- ├── service/       # Business Logic
- ├── repository/    # Database Interactions
- ├── model/         # Entities & DTOs
- └── security/      # JWT & Auth Configurations
-```
+* **Auth** (`/api/auth`) — signup, login, me
+* **Me** (`/api/me`) — profile, delete account, bookmarks, followers/following, stats, settings
+* **Users** (`/api/users`) — public listing/search, profile, follow/unfollow, followers/following
+* **Posts** (`/api/posts`) — CRUD, view counter, like, bookmark, related posts, search/tag filters
+* **Comments** (`/api/posts/{id}/comments`) — nested create/list, delete (cascades replies), per-comment like
+* **Admin** (`/api/admin`, `hasRole("ADMIN")`) — list/promote/demote/delete users, moderate any post, platform stats
 
----
-
-## 🔄 Data Flow
-
-1. User interacts with frontend components.
-2. Frontend sends an API request (with JWT if authenticated).
-3. The backend Controller handles the request.
-4. The Service layer processes business logic.
-5. The Repository layer interacts with the Database.
-6. A Response is sent back as JSON.
-7. The UI updates dynamically based on the response.
+Public reads (published posts, comments, public profiles) don't require a token; everything
+that mutates state does; `/api/admin/**` additionally requires the `ADMIN` role — verified with
+a 403 for a `USER` token and 200 for an `ADMIN` token.
 
 ---
 
 ## 🔐 Security
 
-* **JWT-based Authentication**: Secure stateless sessions.
-* **Role-Based Authorization (RBAC)**: Fine-grained access control.
-* **BCrypt Password Encryption**: Safe credential storage.
-* **CORS Configured**: Secure cross-origin resource sharing.
+* **JWT Authentication** — `JwtAuthenticationFilter` validates the bearer token on every request and populates Spring Security's context (principal = user id, authority = `ROLE_<role>`).
+* **RBAC** — declarative `hasRole("ADMIN")` rule in `SecurityConfiguration`, backed by a `role` claim embedded in the JWT at login.
+* **BCrypt** password hashing; **stateless sessions** (`SessionCreationPolicy.STATELESS`).
+* **Ownership checks** — editing/deleting a post or comment requires being the owner (or an admin); ownership bypasses return `403`, not a silent no-op.
+* **Origin-restricted CORS** via `app.cors.allowed-origins` (not a wildcard).
+* JSON `401`/`403` error bodies (not Spring's default HTML error page).
 
 ---
 
-## 📈 Scalability & Future Enhancements
+## 📈 Possible Next Steps
 
-* 🔄 **Horizontal Scaling** for handling increased traffic.
-* ⚡ **Redis Caching** for optimized read operations.
-* 🔍 **Elasticsearch** for high-performance full-text search.
-* 🌐 **CDN Integration** for faster media delivery.
-* 📩 **Message Queues (Kafka/RabbitMQ)** for async processing (e.g., email notifications).
+* Redis caching for hot read paths (published post list, profile lookups)
+* Full-text search (Postgres `tsvector` or Elasticsearch) in place of the current in-memory filter
+* Rate limiting on auth endpoints
+* Media upload to object storage (S3-compatible) for cover images/avatars
 
 ---
 

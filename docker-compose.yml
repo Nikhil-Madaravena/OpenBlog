@@ -1,0 +1,26 @@
+version: "3.9"
+
+# Spins up PostgreSQL for the "prod" Spring profile. Usage:
+#   docker compose up -d
+#   cd Backend && SPRING_PROFILES_ACTIVE=prod mvn spring-boot:run
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: openblog-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: openblog
+      POSTGRES_USER: openblog
+      POSTGRES_PASSWORD: openblog
+    ports:
+      - "5432:5432"
+    volumes:
+      - openblog-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openblog -d openblog"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  openblog-postgres-data:
